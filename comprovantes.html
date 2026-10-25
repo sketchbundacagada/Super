@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Comprovantes de Despesas</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f6f9;--card:#fff;--tx:#1d2733;--mut:#667085;--bd:#dfe4ea;--pri:#2457c5;--prit:#fff;--ok:#157347;--okb:#dff3e7;--wr:#b42318;--wrb:#fde4e1;--am:#92560a;--amb:#fdf0d3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12171d;--card:#1b222b;--tx:#e8edf3;--mut:#9aa7b6;--bd:#2d3744;--pri:#6c9bff;--prit:#0b1220;--ok:#6fd79a;--okb:#16372a;--wr:#ff9b92;--wrb:#471d1a;--am:#f2c26b;--amb:#40300f}}
+:root[data-theme="dark"]{--bg:#12171d;--card:#1b222b;--tx:#e8edf3;--mut:#9aa7b6;--bd:#2d3744;--pri:#6c9bff;--prit:#0b1220;--ok:#6fd79a;--okb:#16372a;--wr:#ff9b92;--wrb:#471d1a;--am:#f2c26b;--amb:#40300f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{max-width:1000px;margin:0 auto;padding:16px}
+h1{font-size:1.3rem;margin:0 0 12px}
+h2{font-size:1rem;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px}
+.nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav select{flex:1;min-width:160px;font-size:1.05rem;font-weight:600}
+button,.btn{font:inherit;cursor:pointer;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:9px 14px;border-radius:8px}
+button.pri{background:var(--pri);color:var(--prit);border-color:var(--pri);font-weight:600}
+button.sm{padding:4px 9px;font-size:.85rem}
+button.del{color:var(--wr)}
+input,select,textarea{font:inherit;width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+label{display:block;font-size:.82rem;color:var(--mut);margin-bottom:3px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.full{grid-column:1/-1}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--bg);border-radius:10px;padding:10px 12px}
+.stat b{display:block;font-size:1.25rem}
+.stat span{font-size:.8rem;color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{background:var(--bg);border:1px solid var(--bd);border-radius:99px;padding:3px 10px;font-size:.82rem}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--bd);vertical-align:top;font-size:.9rem}
+th{color:var(--mut);font-weight:600;font-size:.8rem}
+td.v{white-space:nowrap;font-weight:600}
+.b{display:inline-block;border-radius:99px;padding:2px 9px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.b.ok{background:var(--okb);color:var(--ok)}.b.pe{background:var(--wrb);color:var(--wr)}.b.te{background:var(--amb);color:var(--am)}
+tr.pend td:first-child{box-shadow:inset 3px 0 var(--wr)}
+.obs{color:var(--mut);font-size:.82rem;margin-top:3px}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+.empty{text-align:center;color:var(--mut);padding:24px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+#modal.on{display:flex}
+#modal .in{background:var(--card);border-radius:12px;padding:12px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column;gap:8px}
+#modal img,#modal iframe{max-width:100%;max-height:75vh;border:0;width:100%;height:75vh;object-fit:contain}
+#modal img{height:auto}
+#report{display:none}
+@media print{
+ .app,#modal{display:none!important}
+ #report{display:block;color:#000;background:#fff;font-size:11pt}
+ #report h1{font-size:16pt}#report h2{font-size:13pt;margin-top:18px;border-bottom:2px solid #000}
+ #report table{min-width:0}#report th,#report td{border-bottom:1px solid #999;color:#000;font-size:10pt}
+ .pb{page-break-before:always}
+}
+</style>
+</head>
+<body>
+<div class="app">
+ <h1>🧾 Comprovantes de Despesas</h1>
+
+ <div class="card">
+  <div class="nav">
+   <button id="prev" title="Mês anterior">◀</button>
+   <select id="mes"></select>
+   <button id="next" title="Próximo mês">▶</button>
+  </div>
+  <div class="stats" style="margin-top:12px">
+   <div class="stat"><b id="sTotal">R$ 0,00</b><span>Total do mês</span></div>
+   <div class="stat"><b id="sQtd">0</b><span>Lançamentos</span></div>
+   <div class="stat"><b id="sPend">0</b><span>Sem comprovante</span></div>
+   <div class="stat"><b id="sAll">R$ 0,00</b><span>Acumulado (todos os meses)</span></div>
+  </div>
+  <div class="chips" id="cats"></div>
+ </div>
+
+ <div class="card">
+  <h2 id="fTitle">Novo lançamento</h2>
+  <div class="grid">
+   <div><label for="cat">Categoria</label><select id="cat"></select></div>
+   <div><label for="valor">Valor (R$)</label><input id="valor" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0,00"></div>
+   <div><label for="data">Data do pagamento</label><input id="data" type="date"></div>
+   <div><label for="status">Status</label>
+    <select id="status"><option>Comprovante Anexado</option><option>Pendente de Comprovante</option><option>Pago por Terceiro</option></select></div>
+   <div class="full"><label for="arq">Anexo / Comprovante (foto ou PDF)</label>
+    <input id="arq" type="file" accept="image/*,application/pdf">
+    <div class="obs" id="arqAtual"></div></div>
+   <div class="full"><label for="obs">Observações / Detalhes do pagamento</label>
+    <textarea id="obs" rows="2" placeholder="Ex.: Pago via Pix pela minha esposa; comprovante extraído do extrato da conta X"></textarea></div>
+  </div>
+  <div class="bar" style="margin-top:12px">
+   <button class="pri" id="salvar">Adicionar</button>
+   <button id="cancelar" style="display:none">Cancelar edição</button>
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>Lançamentos do mês</h2>
+  <div class="tw"><table>
+   <thead><tr><th>Data</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Comprovante</th><th></th></tr></thead>
+   <tbody id="lista"></tbody>
+  </table></div>
+ </div>
+
+ <div class="card">
+  <h2>Relatório e backup</h2>
+  <div class="bar">
+   <button class="pri" id="bPdf">Exportar Relatório (PDF / Impressão)</button>
+   <button id="bJson">Exportar Dados (JSON)</button>
+   <button id="bCsv">Exportar CSV</button>
+   <button id="bImp">Importar backup JSON</button>
+   <input id="fImp" type="file" accept=".json" style="display:none">
+  </div>
+  <p class="obs">Os dados ficam salvos neste navegador. Faça o backup JSON de vez em quando — ele inclui os comprovantes anexados.</p>
+ </div>
+</div>
+
+<div id="modal"><div class="in"><div class="bar" style="justify-content:space-between"><b id="mNome"></b><button id="mFechar">Fechar ✕</button></div><div id="mCorpo"></div></div></div>
+<div id="report"></div>
+
+<script>
+const CATS=["Aluguel","Alimentação / Mercado / Feira","Combustível","Conta de Energia","Conta de Água","Farmácia","Financiamento","Curso","Plano de Internet","Gás","Plano de Saúde","Seguro","Gastos com Filho","Outros"];
+const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const $=id=>document.getElementById(id);
+const brl=n=>(n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fdata=d=>d?d.split("-").reverse().join("/"):"";
+const mlabel=k=>MESES[+k.slice(5)-1]+"/"+k.slice(0,4);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+let dados=[],editId=null,mesSel="",removeArq=false;
+try{dados=JSON.parse(localStorage.getItem("despesas_v1")||"[]")}catch(e){dados=[]}
+const salvarLS=()=>{try{localStorage.setItem("despesas_v1",JSON.stringify(dados))}catch(e){alert("Não foi possível salvar no navegador.")}};
+
+/* Arquivos em IndexedDB (suporta arquivos grandes) */
+const dbp=new Promise((res,rej)=>{try{const r=indexedDB.open("comprovantes",1);r.onupgradeneeded=()=>r.result.createObjectStore("f");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});
+const tx=async(m,fn)=>{const db=await dbp;return new Promise((res,rej)=>{const t=db.transaction("f",m);const rq=fn(t.objectStore("f"));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error)})};
+const putF=(id,b)=>tx("readwrite",s=>s.put(b,id));
+const getF=id=>tx("readonly",s=>s.get(id));
+const delF=id=>tx("readwrite",s=>s.delete(id));
+
+/* Meses */
+const hoje=new Date();
+const hojeK=hoje.getFullYear()+"-"+String(hoje.getMonth()+1).padStart(2,"0");
+function listaMeses(){
+ let fim=[hojeK,...dados.map(d=>d.data.slice(0,7))].sort().pop();
+ if(fim<"2026-04")fim="2026-04";
+ const out=[];let[y,m]=[2026,4];
+ while((y+"-"+String(m).padStart(2,"0"))<=fim){out.push(y+"-"+String(m).padStart(2,"0"));if(++m>12){m=1;y++}}
+ return out;
+}
+function montaMeses(){
+ const l=listaMeses();
+ if(!mesSel)mesSel=l.includes(hojeK)?hojeK:l[l.length-1];
+ $("mes").innerHTML=l.map(k=>`<option value="${k}" ${k===mesSel?"selected":""}>${mlabel(k)}</option>`).join("");
+}
+$("mes").onchange=e=>{mesSel=e.target.value;if(!editId)ajustaData();render()};
+const mover=d=>{const o=[...$("mes").options].map(x=>x.value);const i=o.indexOf(mesSel)+d;if(i>=0&&i<o.length){mesSel=o[i];$("mes").value=mesSel;if(!editId)ajustaData();render()}};
+$("prev").onclick=()=>mover(-1);$("next").onclick=()=>mover(1);
+function ajustaData(){$("data").value=mesSel===hojeK?hoje.toISOString().slice(0,10):mesSel+"-01"}
+
+$("cat").innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");
+
+/* Render */
+const bdg=s=>s==="Pendente de Comprovante"?"pe":s==="Pago por Terceiro"?"te":"ok";
+function render(){
+ montaMeses();
+ const mes=dados.filter(d=>d.data.slice(0,7)===mesSel).sort((a,b)=>a.data.localeCompare(b.data));
+ const tot=mes.reduce((s,d)=>s+d.valor,0);
+ $("sTotal").textContent=brl(tot);$("sQtd").textContent=mes.length;
+ $("sPend").textContent=mes.filter(d=>!d.fileId).length;
+ $("sAll").textContent=brl(dados.reduce((s,d)=>s+d.valor,0));
+ const porCat={};mes.forEach(d=>porCat[d.cat]=(porCat[d.cat]||0)+d.valor);
+ $("cats").innerHTML=Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<span class="chip">${esc(c)}: <b>${brl(v)}</b></span>`).join("")||'<span class="obs">Nenhum gasto neste mês ainda.</span>';
+ $("lista").innerHTML=mes.length?mes.map(d=>`<tr class="${d.fileId?"":"pend"}">
+  <td>${fdata(d.data)}</td>
+  <td>${esc(d.cat)}${d.obs?`<div class="obs">📝 ${esc(d.obs)}</div>`:""}</td>
+  <td class="v">${brl(d.valor)}</td>
+  <td><span class="b ${bdg(d.status)}">${esc(d.status)}</span></td>
+  <td>${d.fileId?`<button class="sm" onclick="ver('${d.id}')">👁 Ver</button>`:'<span class="b pe">Sem anexo</span>'}</td>
+  <td style="white-space:nowrap"><button class="sm" onclick="editar('${d.id}')">Editar</button> <button class="sm del" onclick="excluir('${d.id}')">Excluir</button></td></tr>`).join("")
+ :'<tr><td colspan="6" class="empty">Nenhum lançamento em '+mlabel(mesSel)+'. Use o formulário acima.</td></tr>';
+}
+
+/* Formulário */
+function limpar(){editId=null;removeArq=false;$("valor").value="";$("obs").value="";$("arq").value="";$("status").value="Pendente de Comprovante";$("cat").selectedIndex=0;$("arqAtual").innerHTML="";$("fTitle").textContent="Novo lançamento";$("salvar").textContent="Adicionar";$("cancelar").style.display="none";ajustaData()}
+$("cancelar").onclick=limpar;
+$("salvar").onclick=async()=>{
+ const valor=parseFloat($("valor").value),data=$("data").value;
+ if(!(valor>=0)||isNaN(valor)){alert("Informe o valor.");return}
+ if(!data){alert("Informe a data do pagamento.");return}
+ const f=$("arq").files[0];
+ let reg=editId?dados.find(d=>d.id===editId):{id:uid()};
+ reg.cat=$("cat").value;reg.valor=valor;reg.data=data;reg.status=$("status").value;reg.obs=$("obs").value.trim();
+ try{
+  if(editId&&reg.fileId&&(f||removeArq)){await delF(reg.fileId);reg.fileId=null;reg.fileName=null;reg.fileType=null}
+  if(f){reg.fileId=reg.id;reg.fileName=f.name;reg.fileType=f.type;await putF(reg.id,f)}
+ }catch(e){alert("Não consegui guardar o anexo neste navegador.")}
+ if(reg.fileId&&reg.status==="Pendente de Comprovante")reg.status="Comprovante Anexado";
+ if(!reg.fileId&&reg.status==="Comprovante Anexado")reg.status="Pendente de Comprovante";
+ if(!editId)dados.push(reg);
+ salvarLS();mesSel=data.slice(0,7);limpar();render();
+};
+function editar(id){
+ const d=dados.find(x=>x.id===id);if(!d)return;
+ editId=id;removeArq=false;
+ $("cat").value=d.cat;$("valor").value=d.valor;$("data").value=d.data;$("status").value=d.status;$("obs").value=d.obs||"";$("arq").value="";
+ $("arqAtual").innerHTML=d.fileId?`Anexo atual: ${esc(d.fileName)} — <a href="#" id="rmA">remover</a> (ou escolha outro arquivo para substituir)`:"";
+ if($("rmA"))$("rmA").onclick=e=>{e.preventDefault();removeArq=true;$("arqAtual").textContent="O anexo será removido ao salvar."};
+ $("fTitle").textContent="Editando lançamento";$("salvar").textContent="Salvar alterações";$("cancelar").style.display="";
+ scrollTo({top:0,behavior:"smooth"});
+}
+async function excluir(id){
+ if(!confirm("Excluir este lançamento e o comprovante anexado?"))return;
+ const d=dados.find(x=>x.id===id);
+ try{if(d&&d.fileId)await delF(d.fileId)}catch(e){}
+ dados=dados.filter(x=>x.id!==id);salvarLS();if(editId===id)limpar();render();
+}
+
+/* Preview */
+let urlAtual=null;
+async function ver(id){
+ const d=dados.find(x=>x.id===id);let b=null;
+ try{b=await getF(d.fileId)}catch(e){}
+ if(!b){alert("Arquivo não encontrado neste navegador.");return}
+ if(urlAtual)URL.revokeObjectURL(urlAtual);
+ urlAtual=URL.createObjectURL(b);
+ $("mNome").textContent=d.cat+" — "+fdata(d.data)+" — "+brl(d.valor);
+ $("mCorpo").innerHTML=(d.fileType||b.type||"").startsWith("image/")?`<img src="${urlAtual}" alt="Comprovante">`:`<iframe src="${urlAtual}"></iframe><p class="obs"><a href="${urlAtual}" download="${esc(d.fileName)}">Baixar arquivo</a></p>`;
+ $("modal").classList.add("on");
+}
+const fecha=()=>{$("modal").classList.remove("on");$("mCorpo").innerHTML=""};
+$("mFechar").onclick=fecha;$("modal").onclick=e=>{if(e.target.id==="modal")fecha()};
+
+/* Exportações */
+function baixa(nome,conteudo,tipo){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([conteudo],{type:tipo}));a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+const b64=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)});
+$("bJson").onclick=async()=>{
+ const out=[];
+ for(const d of dados){const o={...d};if(d.fileId){try{const b=await getF(d.fileId);if(b)o.arquivoBase64=await b64(b)}catch(e){}}out.push(o)}
+ baixa("backup-despesas-"+new Date().toISOString().slice(0,10)+".json",JSON.stringify(out),"application/json");
+};
+$("bCsv").onclick=()=>{
+ const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+ const linhas=[["Data","Categoria","Valor","Status","Comprovante","Observações"].map(q).join(";")];
+ [...dados].sort((a,b)=>a.data.localeCompare(b.data)).forEach(d=>linhas.push([fdata(d.data),d.cat,String(d.valor).replace(".",","),d.status,d.fileName||"",d.obs||""].map(q).join(";")));
+ baixa("despesas.csv","\ufeff"+linhas.join("\n"),"text/csv;charset=utf-8");
+};
+$("bImp").onclick=()=>$("fImp").click();
+$("fImp").onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;
+ try{
+  const arr=JSON.parse(await f.text());
+  if(!Array.isArray(arr))throw 0;
+  if(!confirm("Isto substituirá os dados atuais por "+arr.length+" lançamentos do backup. Continuar?"))return;
+  for(const d of dados){if(d.fileId)try{await delF(d.fileId)}catch(_){}}
+  dados=[];
+  for(const o of arr){
+   const b64d=o.arquivoBase64;delete o.arquivoBase64;
+   if(b64d&&o.fileId){try{await putF(o.fileId,await (await fetch(b64d)).blob())}catch(_){o.fileId=null}}
+   dados.push(o);
+  }
+  salvarLS();mesSel="";limpar();render();alert("Backup importado.");
+ }catch(err){alert("Arquivo de backup inválido.")}
+ e.target.value="";
+};
+
+/* Relatório */
+$("bPdf").onclick=()=>{
+ const meses=[...new Set(dados.map(d=>d.data.slice(0,7)))].sort();
+ if(!meses.length){alert("Não há lançamentos para exportar.");return}
+ let h=`<h1>Relatório de Despesas Mensais</h1><p>Gerado em ${hoje.toLocaleDateString("pt-BR")}. Total geral: <b>${brl(dados.reduce((s,d)=>s+d.valor,0))}</b></p>`;
+ meses.forEach((k,i)=>{
+  const mes=dados.filter(d=>d.data.slice(0,7)===k).sort((a,b)=>a.data.localeCompare(b.data));
+  const pc={};mes.forEach(d=>pc[d.cat]=(pc[d.cat]||0)+d.valor);
+  h+=`<h2 class="${i?"pb":""}">${mlabel(k)} — Total: ${brl(mes.reduce((s,d)=>s+d.valor,0))}</h2>
+  <table><thead><tr><th>Categoria</th><th>Total</th></tr></thead><tbody>${Object.entries(pc).map(([c,v])=>`<tr><td>${esc(c)}</td><td>${brl(v)}</td></tr>`).join("")}</tbody></table>
+  <p><b>Detalhamento</b></p>
+  <table><thead><tr><th>Data</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Observações</th></tr></thead><tbody>${mes.map(d=>`<tr><td>${fdata(d.data)}</td><td>${esc(d.cat)}</td><td>${brl(d.valor)}</td><td>${esc(d.status)}${d.fileId?"":" (sem anexo)"}</td><td>${esc(d.obs)}</td></tr>`).join("")}</tbody></table>`;
+ });
+ $("report").innerHTML=h;
+ window.print();
+};
+
+ajustaData();limpar();render();
+</script>
+</body>
+</html>
