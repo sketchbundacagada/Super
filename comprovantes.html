@@ -35,6 +35,7 @@ textarea{font-size:14px;min-height:60px;resize:vertical}
 .bd{display:inline-block;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700;margin-top:4px;margin-right:4px}
 .bd.r{background:#471d1a;color:#ff9b92}.bd.a{background:#40300f;color:#f2c26b}.bd.v{background:#16372a;color:#6fd79a}
 .mini{background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+.tabs{display:flex;gap:6px;margin-bottom:12px}.tab{flex:1;padding:12px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--muted);font-weight:700;font-size:14px;cursor:pointer}.tab.on{background:var(--accent);color:#04211a;border-color:var(--accent)}
 .toast{position:fixed;left:14px;right:14px;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--accent);color:#04211a;padding:14px 16px;border-radius:12px;font-weight:700;text-align:center;font-size:14px;transform:translateY(200%);transition:transform .25s;z-index:50}
 .toast.show{transform:translateY(0)}.toast.error{background:var(--danger);color:#fff}
 details summary{font-size:12px;color:var(--muted);cursor:pointer}
@@ -45,11 +46,13 @@ details input{font-size:13px;padding:10px;margin-top:8px}
 <body>
 <h1>Comprovantes de Despesas</h1>
 
+<div class="tabs"><button class="tab on" data-t="Desp">💸 Despesas</button><button class="tab" data-t="Docs">📁 Documentos</button></div>
 <div class="card" id="filaCard" style="display:none;text-align:center;border-color:var(--warn)">
   <span id="filaTexto" style="font-size:13px;color:var(--warn);font-weight:600"></span>
   <button class="btn btn-secondary" id="btnFila" style="margin-top:10px;padding:12px;font-size:14px">🔄 Tentar enviar agora</button>
 </div>
 
+<div id="tabDesp">
 <div class="card"><span class="label">Categoria</span><div class="chip-grid" id="cats"></div></div>
 <div class="card"><span class="label">Valor (R$)</span><input type="text" class="valor" id="valor" inputmode="decimal" placeholder="0,00"></div>
 <div class="card"><span class="label">Data do pagamento</span><input type="date" id="data"></div>
@@ -71,13 +74,26 @@ details input{font-size:13px;padding:10px;margin-top:8px}
 
 <div class="card" style="margin-top:16px"><span class="label">Lançamentos neste celular</span><div id="lista"></div></div>
 <input type="file" id="fAnx" accept="image/*,application/pdf" style="display:none">
+</div>
+
+<div id="tabDocs" style="display:none">
+<div class="card"><span class="label">Tipo de documento</span><div class="chip-grid" id="dTipos"></div></div>
+<div class="card"><span class="label">Outro tipo? Digite o nome (cria uma pasta nova)</span><input type="text" id="dCustom" placeholder="Ex.: Certidão de Nascimento" style="font-size:16px"></div>
+<div class="card"><span class="label">Descrição do documento</span><input type="text" id="dDesc" placeholder="Ex.: Contracheque setembro/2026" style="font-size:16px"></div>
+<div class="card"><span class="label">Data do documento</span><input type="date" id="dData"></div>
+<div class="card"><span class="label">Arquivo(s): foto ou PDF</span>
+  <input type="file" id="dArq" accept="image/*,application/pdf" multiple style="display:none">
+  <label class="photo-btn" id="dArqBtn" for="dArq">📎 Escolher arquivo(s) ou tirar foto</label></div>
+<button class="btn btn-submit" id="dEnviar">ENVIAR DOCUMENTO</button>
+<div class="card" style="margin-top:16px"><span class="label">Documentos enviados neste celular</span><div id="dLista"></div></div>
+</div>
 
 <div class="card"><details><summary>⚙ Configuração</summary>
   <input id="cfgUrl" placeholder="Endereço do Web App (termina em /exec)">
   <input id="cfgTok" placeholder="Senha (token) igual à do script">
   <button class="btn btn-secondary" id="cfgSalvar" style="margin-top:8px;padding:12px;font-size:14px">Salvar configuração</button>
 </details></div>
-<div class="footer-note">v1.0</div>
+<div class="footer-note">v1.1</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -163,7 +179,7 @@ async function fila(){
 async function esvaziar(){
   $("btnFila").disabled=true;
   for(const p of await qAll()){
-    try{const d=await post({...p,forcar:true});await qDel(p.id);atualiza(p.id,{env:true,link:d.link||undefined})}catch(e){toast(e.message,1);break}
+    try{const d=await post({...p,forcar:true});await qDel(p.id);(p.acao==="documento"?atualizaD:atualiza)(p.id,{env:true,link:d.link||undefined})}catch(e){toast(e.message,1);break}
   }
   $("btnFila").disabled=false;fila();lista();
 }
@@ -210,6 +226,55 @@ $("fAnx").onchange=async e=>{
   }catch(err){toast(err.message,1)}
   lista();
 };
+
+
+/* ===== Aba Documentos ===== */
+const DTIPOS=["Contracheques","Extratos Bancários","Faturas de Cartão de Crédito","CTPS Digital","Comprovantes de Residência","Documentos Pessoais","Extrato Serasa","Outros Documentos"];
+let dTipo=null,dArqs=[];
+const DL=()=>{try{return JSON.parse(localStorage.getItem("docs_comp"))||[]}catch(e){return[]}};
+const sDL=a=>localStorage.setItem("docs_comp",JSON.stringify(a));
+function atualizaD(id,c){const a=DL(),i=a.findIndex(x=>x.id===id);if(i>=0){Object.assign(a[i],c);sDL(a)}dRender()}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));
+  $("tabDesp").style.display=b.dataset.t==="Desp"?"block":"none";
+  $("tabDocs").style.display=b.dataset.t==="Docs"?"block":"none";
+});
+$("dTipos").innerHTML=DTIPOS.map(c=>`<div class="chip" data-v="${c}">${c}</div>`).join("");
+function dMarca(){const c=$("dCustom").value.trim();document.querySelectorAll("#dTipos .chip").forEach(e=>e.classList.toggle("active",!c&&e.dataset.v===dTipo))}
+$("dTipos").onclick=e=>{if(e.target.dataset.v){dTipo=e.target.dataset.v;$("dCustom").value="";dMarca()}};
+$("dCustom").oninput=dMarca;
+$("dData").value=$("data").value;
+$("dArq").onchange=async e=>{
+  const fs=[...e.target.files];if(!fs.length)return;
+  try{dArqs=await Promise.all(fs.map(lerArquivo))}catch(err){toast(err.message,1);return}
+  $("dArqBtn").classList.add("filled");$("dArqBtn").textContent="✔ "+dArqs.length+" arquivo(s) anexado(s)";
+};
+async function docEnviar(p){
+  try{const d=await post(p);atualizaD(p.id,{env:true,link:d.link||undefined});toast("Enviado ✔")}
+  catch(err){await qPut(p);toast("Guardado no celular, será enviado depois: "+err.message,1)}
+  fila();dRender();
+}
+$("dEnviar").onclick=async()=>{
+  const pasta=$("dCustom").value.trim()||dTipo||"",data=$("dData").value,desc=$("dDesc").value.trim();
+  if(!pasta){toast("Escolha o tipo ou digite o nome da pasta",1);return}
+  if(!dArqs.length){toast("Anexe pelo menos um arquivo",1);return}
+  if(!data){toast("Informe a data do documento",1);return}
+  $("dEnviar").disabled=true;$("dEnviar").textContent="Enviando...";
+  for(let i=0;i<dArqs.length;i++){
+    const a=dArqs[i],suf=dArqs.length>1?" ("+(i+1)+")":"";
+    const p={id:uid(),acao:"documento",pasta,descricao:(desc||pasta)+suf,data,arquivoBase64:a.b64,mime:a.mime};
+    sDL([...DL(),{id:p.id,pasta,descricao:p.descricao,data,env:false}]);
+    await docEnviar(p);
+  }
+  dArqs=[];$("dArq").value="";$("dDesc").value="";
+  $("dArqBtn").classList.remove("filled");$("dArqBtn").textContent="📎 Escolher arquivo(s) ou tirar foto";
+  $("dEnviar").disabled=false;$("dEnviar").textContent="ENVIAR DOCUMENTO";
+};
+function dRender(){
+  const a=DL().sort((x,y)=>y.data.localeCompare(x.data)).slice(0,40);
+  $("dLista").innerHTML=a.length?a.map(x=>`<div class="item"><div><b>${esc(x.descricao)}</b><br><small>${esc(x.pasta)} · ${fd(x.data)}</small>${x.env?"":'<br><span class="bd a">Aguardando envio</span>'}</div><div>${x.link?`<a class="mini" href="${x.link}" target="_blank" rel="noopener">Abrir</a>`:""}</div></div>`).join(""):'<small style="color:var(--muted)">Nenhum documento enviado ainda.</small>';
+}
+dRender();
 
 if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));
 addEventListener("load",()=>{fila();lista();esvaziar()});
