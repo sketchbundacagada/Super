@@ -1,5 +1,5 @@
 // Permite abrir o app sem internet. Ao atualizar o comprovantes.html, troque o número da versão abaixo.
-const CACHE_NOME = 'comprovantes-v1';
+const CACHE_NOME = 'comprovantes-v2';
 const ARQUIVOS = ['./', './comprovantes.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_NOME).then(c => c.addAll(ARQUIVOS))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
